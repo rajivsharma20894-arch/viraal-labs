@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 
@@ -11,28 +11,33 @@ const contactInfo = [
 
 export default function Contact() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
-  const [status, setStatus] = useState<"idle" | "sending" | "success">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", message: "" });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // Reliable mailto fallback — always works, no API keys needed
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("sending");
 
-    const subject = `New Inquiry from ${formData.name} — Viral Labs Website`;
-    const body = `Name: ${formData.name}%0AEmail: ${formData.email}%0APhone: ${formData.phone}%0A%0AMessage:%0A${formData.message}`;
-    const mailtoLink = `mailto:Rajiv.sharma20894@gmail.com?subject=${encodeURIComponent(subject)}&body=${body}`;
+    try {
+      const res = await fetch("https://formspree.io/f/YOUR_FORM_ID", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(formData),
+      });
 
-    window.open(mailtoLink, "_blank");
-
-    setTimeout(() => {
-      setStatus("success");
-      setFormData({ name: "", email: "", phone: "", message: "" });
-    }, 800);
+      if (res.ok) {
+        setStatus("success");
+        setFormData({ name: "", email: "", phone: "", message: "" });
+      } else {
+        setStatus("error");
+      }
+    } catch {
+      setStatus("error");
+    }
   };
 
   return (
@@ -88,18 +93,23 @@ export default function Contact() {
               {status === "success" && (
                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
                   className="bg-teal-500/10 border border-teal-500/30 text-teal-400 rounded-xl px-5 py-4 text-sm font-semibold">
-                  🎉 Your email app opened! Send the email and we&apos;ll respond within 2 hours.
+                  🎉 Message sent! We&apos;ll contact you within 2 hours.
+                </motion.div>
+              )}
+
+              {status === "error" && (
+                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                  className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-5 py-4 text-sm font-semibold">
+                  ❌ Something went wrong. Please email us directly at Rajiv.sharma20894@gmail.com
                 </motion.div>
               )}
 
               <motion.button type="submit" disabled={status === "sending"} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 className="btn-primary w-full text-white font-bold py-4 rounded-full text-lg disabled:opacity-60">
-                {status === "sending" ? "⏳ Opening email..." : "🚀 Book Free Strategy Call"}
+                {status === "sending" ? "⏳ Sending..." : "🚀 Book Free Strategy Call"}
               </motion.button>
 
-              <p className="text-xs text-white/25 text-center">
-                🔒 Your info is safe. No spam, ever.
-              </p>
+              <p className="text-xs text-white/25 text-center">🔒 Your info is safe. No spam, ever.</p>
             </form>
           </motion.div>
 
@@ -124,7 +134,6 @@ export default function Contact() {
               </motion.a>
             ))}
 
-            {/* Social */}
             <div className="p-5 dark-card rounded-2xl border border-white/5">
               <div className="text-sm font-bold text-white/30 uppercase tracking-wider mb-4">Follow Us</div>
               <div className="flex gap-3">
@@ -143,7 +152,6 @@ export default function Contact() {
               </div>
             </div>
 
-            {/* Google Maps */}
             <div className="rounded-2xl overflow-hidden border border-white/5 h-52">
               <iframe title="Viral Labs Location"
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3782.437!2d73.8784!3d18.5935!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bc2c7f0a9b1a1a1%3A0x1234567890abcdef!2sDighi%2C+Pune%2C+Maharashtra!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin"

@@ -5,26 +5,41 @@ import { motion, AnimatePresence } from "framer-motion";
 interface AuditModalProps { isOpen: boolean; onClose: () => void; }
 
 export default function AuditModal({ isOpen, onClose }: AuditModalProps) {
-  const [status, setStatus] = useState<"idle" | "sending" | "success">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", business: "", goal: "" });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("sending");
-    const subject = `Free Audit Request — ${formData.name} (${formData.business || "New Lead"})`;
-    const body = `Name: ${formData.name}%0AEmail: ${formData.email}%0APhone: ${formData.phone}%0ABusiness: ${formData.business}%0AGoal: ${formData.goal}`;
-    window.open(`mailto:Rajiv.sharma20894@gmail.com?subject=${encodeURIComponent(subject)}&body=${body}`, "_blank");
-    setTimeout(() => { setStatus("success"); }, 800);
+
+    try {
+      const res = await fetch("https://formspree.io/f/YOUR_FORM_ID", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (res.ok) {
+        setStatus("success");
+      } else {
+        setStatus("error");
+      }
+    } catch {
+      setStatus("error");
+    }
   };
 
   const handleClose = () => {
     if (status !== "sending") {
       onClose();
-      setTimeout(() => { setStatus("idle"); setFormData({ name: "", email: "", phone: "", business: "", goal: "" }); }, 300);
+      setTimeout(() => {
+        setStatus("idle");
+        setFormData({ name: "", email: "", phone: "", business: "", goal: "" });
+      }, 300);
     }
   };
 
@@ -47,7 +62,6 @@ export default function AuditModal({ isOpen, onClose }: AuditModalProps) {
             {/* Header */}
             <div className="relative p-7 overflow-hidden" style={{ background: "linear-gradient(135deg, #0f2060, #061a18)" }}>
               <div className="absolute top-0 right-0 w-40 h-40 bg-teal-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/10 rounded-full translate-y-1/2 -translate-x-1/2" />
               <button onClick={handleClose}
                 className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white/60 hover:bg-white/20 hover:text-white transition-all">
                 ✕
@@ -62,9 +76,12 @@ export default function AuditModal({ isOpen, onClose }: AuditModalProps) {
               {status === "success" ? (
                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-8">
                   <div className="text-5xl mb-4">🎉</div>
-                  <h4 className="font-black text-white text-xl mb-2">You&apos;re in!</h4>
-                  <p className="text-white/50 mb-6">Your email app opened — just send it! We&apos;ll respond within <strong className="text-teal-400">2 hours</strong>.</p>
-                  <motion.button onClick={handleClose} whileHover={{ scale: 1.05 }} className="btn-primary text-white font-bold px-8 py-3 rounded-full">
+                  <h4 className="font-black text-white text-xl mb-2">Request Received!</h4>
+                  <p className="text-white/50 mb-6">
+                    We&apos;ll reach out to <strong className="text-teal-400">{formData.email}</strong> within <strong className="text-teal-400">2 hours</strong> to schedule your free strategy session.
+                  </p>
+                  <motion.button onClick={handleClose} whileHover={{ scale: 1.05 }}
+                    className="btn-primary text-white font-bold px-8 py-3 rounded-full">
                     Close
                   </motion.button>
                 </motion.div>
@@ -104,9 +121,17 @@ export default function AuditModal({ isOpen, onClose }: AuditModalProps) {
                       <option value="all">Full Digital Marketing Package</option>
                     </select>
                   </div>
+
+                  {status === "error" && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                      className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-4 py-3 text-xs font-semibold">
+                      ❌ Failed to send. Please email us: Rajiv.sharma20894@gmail.com
+                    </motion.div>
+                  )}
+
                   <motion.button type="submit" disabled={status === "sending"} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                     className="btn-primary w-full text-white font-bold py-4 rounded-full disabled:opacity-60">
-                    {status === "sending" ? "⏳ Opening email..." : "🚀 Claim My Free Audit"}
+                    {status === "sending" ? "⏳ Sending..." : "🚀 Claim My Free Audit"}
                   </motion.button>
                   <p className="text-xs text-white/25 text-center">🔒 Your info is safe. We never spam.</p>
                 </form>
